@@ -14,5 +14,3 @@ int main() {
     parse(path1, path2);
     return 0;
 }
-
-// i hate you klez <3
