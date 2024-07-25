@@ -36,6 +36,13 @@ void doLine(vec3d v1, vec3d v2, std::ofstream& fw, int gap) {
     }
 }
 
+void doDots(vec3d vx, std::ofstream& fw) {
+    // so minecraft decided to change the particle syntax...
+    // fw << "particle minecraft:dust 0 1 0 1 ^" << vx.x << " ^" << vx.y + 5 << " ^" << vx.z << " 0 0 0 0 1 force @a" << "\n";
+    // particle dust{color:[0.0,0.0,0.0],scale:1} 1 2 3 0 0 0 0 1
+    fw << "particle dust{color:[0.0,1.0,0.0],scale:1} ^" << vx.x << " ^" << vx.y + 5 << " ^" << vx.z << " 0 0 0 0 1 force @a" << "\n";
+}
+
 void parse(const char* path1, const char* path2) {
     std::ifstream fr(path1);
     if (!fr.is_open()) {
@@ -59,15 +66,26 @@ void parse(const char* path1, const char* path2) {
     int amp = 3;
     int gap = 25;
 
+    extern bool withLine;
+
     for (size_t i = 0; i < vertices.size() - 1; ++i) {
         const vec3d& pvx1 = vertices[i];
         const vec3d& pvx2 = vertices[i + 1];
-        doLine(
-            { pvx1.x * amp, pvx1.y * amp, pvx1.z * amp },
-            { pvx2.x * amp, pvx2.y * amp, pvx2.z * amp },
-            fw, 
-            gap
-        );
+
+        if (withLine) {
+            doLine(
+                { pvx1.x * amp, pvx1.y * amp, pvx1.z * amp },
+                { pvx2.x * amp, pvx2.y * amp, pvx2.z * amp },
+                fw,
+                gap
+            );
+        }
+        else {
+            doDots(
+                { pvx1.x * amp, pvx1.y * amp, pvx1.z * amp },
+                fw
+            );
+        }
     }
 
     fw.close();
