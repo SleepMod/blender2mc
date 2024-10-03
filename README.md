@@ -10,3 +10,6 @@ in the source code.
 older versions. 
 + It will be published the whole solution
 + Refactor and make it fully in C++ with OOP principles
+
+10/03/2024
++ Published the solution with everything on process from the comment above.
