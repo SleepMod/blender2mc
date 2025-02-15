@@ -3,17 +3,51 @@
 #include <sstream>
 #include <string>
 #include <iomanip> // why pcs are so weird
+#include <cmath>
 
-/*
-    I legit have no idea, but blender sorts its vertices
-    as it wants, so a proper vertex union A->B cannot be
-    properly performed, though the algorith i wrote is
-    correct, for now i have no idea how to solve it.
-*/
+constexpr float toRadians(float deg) {
+    return deg * 3.14159265358 / 180.0f;
+}
 
 struct vec3d {
     float x, y, z;
 };
+
+vec3d rotateVertex(const vec3d& vertex, float angleX, float angleY, float angleZ) {
+    float radX = toRadians(angleX);
+    float radY = toRadians(angleY);
+    float radZ = toRadians(angleZ);
+
+    // eje x
+    float cosX = cos(radX), sinX = sin(radX);
+    vec3d rotatedX = {
+        vertex.x,
+        vertex.y * cosX - vertex.z * sinX,
+        vertex.y * sinX + vertex.z * cosX
+    };
+
+    // eje y
+    float cosY = cos(radY), sinY = sin(radY);
+    vec3d rotatedY = {
+        rotatedX.x * cosY + rotatedX.z * sinY,
+        rotatedX.y,
+        -rotatedX.x * sinY + rotatedX.z * cosY
+    };
+
+    // eje z
+    float cosZ = cos(radZ), sinZ = sin(radZ);
+    vec3d rotatedZ = {
+        rotatedY.x * cosZ - rotatedY.y * sinZ,
+        rotatedY.x * sinZ + rotatedY.y * cosZ,
+        rotatedY.z
+    };
+
+    return rotatedZ;
+}
+
+std::string setupString(std::string s1, std::string s2) {
+    return s1 + " " + s2;
+}
 
 void processLine(const std::string& line, std::vector<vec3d>& vertices) {
     if (line.rfind("v ", 0) == 0) {
@@ -31,25 +65,15 @@ void doLine(vec3d v1, vec3d v2, std::ofstream& fw, int gap) {
         float dx = v1.x + (v2.x - v1.x) * t;
         float dy = v1.y + (v2.y - v1.y) * t;
         float dz = v1.z + (v2.z - v1.z) * t;
-        //fw << std::fixed << std::setprecision(2); // i dont like this tbh, but couldn't figure anything
-        //fw << "particle minecraft:dust 0 1 0 1 ^" << dx << " ^" << dy + 5 << " ^" << dz << " 0 0 0 0 1 force @a" << "\n";
         fw << "setblock ^" << (int)dx << " ^" << (int)dy + 20 << " ^" << (int)dz << " minecraft:red_concrete replace\n";
     }
 }
 
-void doDots(vec3d vx, std::ofstream& fw) {
-    // so minecraft decided to change the particle syntax...
-    // fw << "particle minecraft:dust 0 1 0 1 ^" << vx.x << " ^" << vx.y + 5 << " ^" << vx.z << " 0 0 0 0 1 force @a" << "\n";
-    // particle dust{color:[0.0,0.0,0.0],scale:1} 1 2 3 0 0 0 0 1
-    //fw << "particle dust{color:[0.0,1.0,0.0],scale:1} ^" << vx.x << " ^" << vx.y + 5 << " ^" << vx.z << " 0 0 0 0 1 force @a" << "\n";
-    fw << "setblock ^" << (int)vx.x << " ^" << (int)vx.y + 20 << " ^" << (int)vx.z << " minecraft:red_concrete replace\n";
+void doDots(vec3d vx, int kx, int ky, int kz, std::ofstream& fw, std::string block, std::string modifier) {
+    fw << "setblock " << kx + (int)vx.x << " " << ky + (int)vx.y << " " << kz + (int)vx.z << " " << block << " " << modifier << "\n";
 }
 
-int a(...) {
-    return 0;
-}
-
-void parse(const char* path1, const char* path2) {
+void convertObject(const char* path1, const char* path2, float angleX, float angleY, float angleZ, int x, int y, int z, float amplitude, std::string block, std::string modifier) {
     std::ifstream fr(path1);
     if (!fr.is_open()) {
         return;
@@ -69,31 +93,26 @@ void parse(const char* path1, const char* path2) {
         return;
     }
 
-    int amp = 3;
     int gap = 25;
 
     extern bool withLine;
 
     int a = vertices.size();
-    printf("Vertices to process = %d", a);
+    //printf("Vertices to process = %d", a);
 
     for (size_t i = 0; i < vertices.size() - 1; ++i) {
-        const vec3d& pvx1 = vertices[i];
-        const vec3d& pvx2 = vertices[i + 1];
+        vec3d pvx1 = rotateVertex(vertices[i], angleX, angleY, angleZ);
+        vec3d pvx2 = rotateVertex(vertices[i + 1], angleX, angleY, angleZ);
+
+        // escala
+        pvx1 = { pvx1.x * amplitude, pvx1.y * amplitude, pvx1.z * amplitude };
+        pvx2 = { pvx2.x * amplitude, pvx2.y * amplitude, pvx2.z * amplitude };
 
         if (withLine) {
-            doLine(
-                { pvx1.x * amp, pvx1.y * amp, pvx1.z * amp },
-                { pvx2.x * amp, pvx2.y * amp, pvx2.z * amp },
-                fw,
-                gap
-            );
+            doLine(pvx1, pvx2, fw, gap);
         }
         else {
-            doDots(
-                { pvx1.x * amp, pvx1.y * amp, pvx1.z * amp },
-                fw
-            );
+            doDots(pvx1, x, y, z, fw, block, modifier);
         }
     }
 
